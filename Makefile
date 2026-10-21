@@ -1,7 +1,7 @@
 .PHONY: setup build run test clean
 
-APP := generic
-MODULE := woodpecker-generic-forge
+APP := gitolite
+MODULE := woodpecker-gitolite-forge
 
 setup:
 	@if [ ! -f go.mod ]; then go mod init $(MODULE); fi

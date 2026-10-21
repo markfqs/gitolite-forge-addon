@@ -29,8 +29,8 @@ type Opts struct {
 	SkipVerify        bool   // Skip ssl verification.
 }
 
-// Generic Forge
-type Generic struct {
+// Gitolite Forge
+type Gitolite struct {
 	id                int64
 	url               string
 	oAuthClientID     string
@@ -40,9 +40,9 @@ type Generic struct {
 	skipVerify        bool
 }
 
-// New returns a Forge implementation that integrates with generic git
+// New returns a Forge implementation that integrates with gitolite git
 func New(id int64, opts Opts) (forge.Forge, error) {
-	return &Generic{
+	return &Gitolite{
 		id:                id,
 		url:               opts.URL,
 		oAuthClientID:     opts.OAuthClientID,
@@ -54,16 +54,16 @@ func New(id int64, opts Opts) (forge.Forge, error) {
 }
 
 // Name returns the string name of this driver.
-func (g *Generic) Name() string {
-	return "Generic"
+func (g *Gitolite) Name() string {
+	return "Gitolite"
 }
 
 // URL returns the root url of a configured forge.
-func (g *Generic) URL() string {
+func (g *Gitolite) URL() string {
 	return g.url
 }
 
-func (g *Generic) oauth2Config(ctx context.Context) (*oauth2.Config, context.Context) {
+func (g *Gitolite) oauth2Config(ctx context.Context) (*oauth2.Config, context.Context) {
 	return &oauth2.Config{
 			ClientID:     g.oAuthClientID,
 			ClientSecret: g.oAuthClientSecret,
@@ -89,7 +89,7 @@ func (g *Generic) oauth2Config(ctx context.Context) (*oauth2.Config, context.Con
 //  3. Second call with OAuthRequest.Code returns (User, redirectURL, nil)
 //
 // Returned User must contain: Login, Email, Avatar, AccessToken, RefreshToken, Expiry, ForgeRemoteID
-func (g *Generic) Login(ctx context.Context, req *forge_types.OAuthRequest) (*model.User, string, error) {
+func (g *Gitolite) Login(ctx context.Context, req *forge_types.OAuthRequest) (*model.User, string, error) {
 	config, oauth2Ctx := g.oauth2Config(ctx)
 	redirectURL := config.AuthCodeURL(req.State)
 
@@ -119,57 +119,57 @@ func (g *Generic) Login(ctx context.Context, req *forge_types.OAuthRequest) (*mo
 	return user, redirectURL, nil
 }
 
-func (g *Generic) Hook(ctx context.Context, r *http.Request) (*model.Repo, *model.Pipeline, error) {
+func (g *Gitolite) Hook(ctx context.Context, r *http.Request) (*model.Repo, *model.Pipeline, error) {
 	// TODO
 	return nil, nil, types.ErrNotImplemented
 }
 
-func (g *Generic) Repo(ctx context.Context, u *model.User, remoteID model.ForgeRemoteID, owner, name string) (*model.Repo, error) {
+func (g *Gitolite) Repo(ctx context.Context, u *model.User, remoteID model.ForgeRemoteID, owner, name string) (*model.Repo, error) {
 	// TODO
 	return nil, types.ErrNotImplemented
 }
 
-func (g *Generic) Repos(ctx context.Context, u *model.User, p *model.ListOptions) ([]*model.Repo, error) {
+func (g *Gitolite) Repos(ctx context.Context, u *model.User, p *model.ListOptions) ([]*model.Repo, error) {
 	// TODO
 	return nil, types.ErrNotImplemented
 }
 
-func (g *Generic) File(ctx context.Context, u *model.User, r *model.Repo, b *model.Pipeline, fileName string) ([]byte, error) {
+func (g *Gitolite) File(ctx context.Context, u *model.User, r *model.Repo, b *model.Pipeline, fileName string) ([]byte, error) {
 	// TODO
 	return nil, types.ErrNotImplemented
 }
 
 // NON Supported methods
-func (g *Generic) Netrc(u *model.User, r *model.Repo) (*model.Netrc, error) {
+func (g *Gitolite) Netrc(u *model.User, r *model.Repo) (*model.Netrc, error) {
 	return nil, types.ErrNotImplemented
 }
-func (g *Generic) Teams(ctx context.Context, u *model.User, p *model.ListOptions) ([]*model.Team, error) {
+func (g *Gitolite) Teams(ctx context.Context, u *model.User, p *model.ListOptions) ([]*model.Team, error) {
 	return nil, types.ErrNotImplemented
 }
-func (g *Generic) Dir(ctx context.Context, u *model.User, r *model.Repo, b *model.Pipeline, dirName string) ([]*types.FileMeta, error) {
+func (g *Gitolite) Dir(ctx context.Context, u *model.User, r *model.Repo, b *model.Pipeline, dirName string) ([]*types.FileMeta, error) {
 	return nil, types.ErrNotImplemented
 }
-func (g *Generic) Status(ctx context.Context, u *model.User, r *model.Repo, b *model.Pipeline, p *model.Workflow) error {
+func (g *Gitolite) Status(ctx context.Context, u *model.User, r *model.Repo, b *model.Pipeline, p *model.Workflow) error {
 	return types.ErrNotImplemented
 }
-func (g *Generic) Activate(ctx context.Context, u *model.User, r *model.Repo, link string) error {
+func (g *Gitolite) Activate(ctx context.Context, u *model.User, r *model.Repo, link string) error {
 	return types.ErrNotImplemented
 }
-func (g *Generic) Deactivate(ctx context.Context, u *model.User, r *model.Repo, link string) error {
+func (g *Gitolite) Deactivate(ctx context.Context, u *model.User, r *model.Repo, link string) error {
 	return types.ErrNotImplemented
 }
-func (g *Generic) Branches(ctx context.Context, u *model.User, r *model.Repo, p *model.ListOptions) ([]string, error) {
+func (g *Gitolite) Branches(ctx context.Context, u *model.User, r *model.Repo, p *model.ListOptions) ([]string, error) {
 	return nil, types.ErrNotImplemented
 }
-func (g *Generic) BranchHead(ctx context.Context, u *model.User, r *model.Repo, branch string) (*model.Commit, error) {
+func (g *Gitolite) BranchHead(ctx context.Context, u *model.User, r *model.Repo, branch string) (*model.Commit, error) {
 	return nil, types.ErrNotImplemented
 }
-func (g *Generic) PullRequests(ctx context.Context, u *model.User, r *model.Repo, p *model.ListOptions) ([]*model.PullRequest, error) {
+func (g *Gitolite) PullRequests(ctx context.Context, u *model.User, r *model.Repo, p *model.ListOptions) ([]*model.PullRequest, error) {
 	return nil, types.ErrNotImplemented
 }
-func (g *Generic) OrgMembership(ctx context.Context, u *model.User, org string) (*model.OrgPerm, error) {
+func (g *Gitolite) OrgMembership(ctx context.Context, u *model.User, org string) (*model.OrgPerm, error) {
 	return nil, types.ErrNotImplemented
 }
-func (g *Generic) Org(ctx context.Context, u *model.User, org string) (*model.Org, error) {
+func (g *Gitolite) Org(ctx context.Context, u *model.User, org string) (*model.Org, error) {
 	return nil, types.ErrNotImplemented
 }

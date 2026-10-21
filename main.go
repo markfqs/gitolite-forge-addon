@@ -5,5 +5,5 @@ import (
 )
 
 func main() {
-	addon.Serve(&Generic{})
+	addon.Serve(&Gitolite{})
 }

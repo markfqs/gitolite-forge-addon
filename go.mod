@@ -1,4 +1,4 @@
-module woodpecker-generic-forge
+module woodpecker-gitolite-forge
 
 go 1.27.0
 

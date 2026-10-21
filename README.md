@@ -1,43 +1,41 @@
 Just compile/test:
 
-go mod init generic-forge && go mod tidy && go build -o generic ./generic
+go mod init gitolite-forge && go mod tidy && go build -o gitolite ./gitolite
 
+Login
+ it also supplies the user identity and tokens that Woodpecker needs for subsequent operations
 
-TO IMPLEMENT
-+	Name() string
-+	URL() string
-!	Login(ctx context.Context, r *types.OAuthRequest) (*model.User, string, error)
--	Teams(ctx context.Context, u *model.User, p *model.ListOptions) ([]*model.Team, error)
-	Hook(ctx context.Context, r *http.Request) (*model.Repo, *model.Pipeline, error)
-	Repo(ctx context.Context, u *model.User, remoteID model.ForgeRemoteID, owner, name string) (*model.Repo, error)
-	Repos(ctx context.Context, u *model.User, p *model.ListOptions) ([]*model.Repo, error)
-	File(ctx context.Context, u *model.User, r *model.Repo, b *model.Pipeline, fileName string) ([]byte, error)
--	Dir(ctx context.Context, u *model.User, r *model.Repo, b *model.Pipeline, dirName string) ([]*types.FileMeta, error)
--	Status(ctx context.Context, u *model.User, r *model.Repo, b *model.Pipeline, p *model.Workflow) error
--	Netrc(u *model.User, r *model.Repo) (*model.Netrc, error)
--	Activate(ctx context.Context, u *model.User, r *model.Repo, link string) error
--	Deactivate(ctx context.Context, u *model.User, r *model.Repo, link string) error
--	Branches(ctx context.Context, u *model.User, r *model.Repo, p *model.ListOptions) ([]string, error)
--	BranchHead(ctx context.Context, u *model.User, r *model.Repo, branch string) (*model.Commit, error)
--	PullRequests(ctx context.Context, u *model.User, r *model.Repo, p *model.ListOptions) ([]*model.PullRequest, error)
--	OrgMembership(ctx context.Context, u *model.User, org string) (*model.OrgPerm, error)
--	Org(ctx context.Context, u *model.User, org string) (*model.Org, error)
+# IDEAS
 
+Name it gitolite
+Forge-Addon will use a fixed provided SSH key to access the repository
 
-As we need to manage different Auth URLs from the repos, we must get/set them from enviroment and add to config/forge struct/class
+environment:
+  FORGE_SSH_HOST: forge.internal
+  FORGE_SSH_USER: woodpecker
+  FORGE_SSH_KEY_PATH: /run/secrets/forge_ssh_key
+  FORGE_SSH_KNOWN_HOSTS: /run/secrets/forge_known_hosts
 
-PROMPT
-> I'm developing a WoodPeckerCI forge-addon that will use a generic OAuth2 provider (so all needed parameters like URL and the like need to be configurable). Git repositories are accessed via SSH with a dedicated, fixed SSH-key no matter the user and the pipelines will be triggered by post-receive hooks on the git repositories. Tell me the minimal forge methods interface I need to implement.
+Probablay would need to package separate helper code for SSH interactions:
+- Repository listing by user
+- Repository metadata by user
 
-Any authenticated user should have access to the pipelines (so I just need to authenticate, no )
+Implement:
+- Login -> OAuth
+- Hook
+- File -> SSH
+- Repo -> SSH
+- Repos -> SSH
 
+How to mock them?
+There is an OLD go package for gitolite:
+https://github.com/VonC/gogitolite
+https://pkg.go.dev/github.com/VonC/gogitolite/gitolite
 
-Required methods:
-Login -> ?
-Repo -> Return a forge repository URL
-Repos -> List of repositories
-File
-Hook
+For SSH need:
+- Known hosts
+- SSH user and key
+- SSH server and port
 
 	// Repo fetches a single repository.
 	//
@@ -78,10 +76,4 @@ Hook
 	// (e.g. repository settings changed).
 	Hook(ctx context.Context, r *http.Request) (*model.Repo, *model.Pipeline, error)
 
-
-
-Repository: woodpecker-generic-forge
-Forge identifier: generic
-Go module: codeberg.org/yourusername/woodpecker-generic-forge (if hosting on Codeberg)
-Executable: generic
 
