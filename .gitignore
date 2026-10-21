@@ -1,0 +1,14 @@
+# Binaries
+/bin/
+/dist/
+
+# Go build artifacts
+*.test
+*.out
+
+# Environment variables and secrets
+.env
+.env.*
+
+# IDEs and editors
+.vscode/
