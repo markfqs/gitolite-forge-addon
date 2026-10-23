@@ -1,79 +1,59 @@
-Just compile/test:
+# Gitolite Forge
 
-go mod init gitolite-forge && go mod tidy && go build -o gitolite ./gitolite
+This is a WoodPeckerCI Forge Addon for Gitolite.
 
-Login
- it also supplies the user identity and tokens that Woodpecker needs for subsequent operations
+The main goal is to make as simple and generic as possible (would be good if could work with any git repository). Too achieve that we :
 
-# IDEAS
+* Implement the minimum required methods
+* Keeping separated authentication/authorization from repository access
+* Allow someway to provide static (i.e. via file) data for the methods
 
-Name it gitolite
-Forge-Addon will use a fixed provided SSH key to access the repository
+## Requirements
 
-environment:
-  FORGE_SSH_HOST: forge.internal
-  FORGE_SSH_USER: woodpecker
-  FORGE_SSH_KEY_PATH: /run/secrets/forge_ssh_key
-  FORGE_SSH_KNOWN_HOSTS: /run/secrets/forge_known_hosts
+Mainly the forge must provide the following services:
 
-Probablay would need to package separate helper code for SSH interactions:
-- Repository listing by user
-- Repository metadata by user
+* Authentication : Thru Generic OAuth2/OpenID provider with as least config possible
+* Repository Access: Thru SSH, by using a fixed-provided SSH-key
 
-Implement:
-- Login -> OAuth
-- Hook
-- File -> SSH
-- Repo -> SSH
-- Repos -> SSH
+## Methods to implement
 
-How to mock them?
-There is an OLD go package for gitolite:
-https://github.com/VonC/gogitolite
-https://pkg.go.dev/github.com/VonC/gogitolite/gitolite
+* Name,URL (basic)
+* Login (authenticates the user via OAuth2) and provides identity to WoodPecker
+* Repo (fetch a repository using SSH, would need to map repository names), may be using static data
+* Repos (List available repositories, with permissions) may be using static data
+* File (Fetch a file at commit-id from repo, used to fetch pipeine configuration)
+* Hook (parse webhook and provide pipeline metadata)
+
+# Implementation Plan
+
+## Configuration needed
+
+We need to have provided:
+
+* OAuth client-id, secret and URL
+* SSH key
+* URL for repository view (http)
+* URL for repository clone (ssh)
+
+## Login and identity
+
+* Will use OpenID autodiscovery to ease configuration and also to keep generic as possible
+* Will just authenticate the user, although we get a token, that token is not validated by repos (accessed thru SSH)
+
+# Ideas
+
+* Repository listing could be fetched from gitweb project.list
+
+# References
+
+* [go-gitolite](https://github.com/VonC/gogitolite)
+* [go-package](https://pkg.go.dev/github.com/VonC/gogitolite/gitolite)
+* [OIDC Client test](https://github.com/leplusorg/openid-connect-provider-debugger)
+
+We could also mock Repos methods (static)
 
 For SSH need:
 - Known hosts
 - SSH user and key
 - SSH server and port
-
-	// Repo fetches a single repository.
-	//
-	// Lookup Strategy:
-	// - Prefer lookup by remoteID (forge's internal ID) if provided (more reliable as repos can be renamed)
-	// - Fallback to owner/name if remoteID empty
-	//
-	// Must verify user has at least read access.
-	// Caller must make sure ForgeID is set.
-	Repo(ctx context.Context, u *model.User, remoteID model.ForgeRemoteID, owner, name string) (*model.Repo, error)
-
-	// Repos fetches all repositories accessible to the user.
-	// Should include user's permission level in Repo.Perm.
-	// Should support pagination via ListOptions.
-	// Caller must make sure ForgeID is set.
-	Repos(ctx context.Context, u *model.User, p *model.ListOptions) ([]*model.Repo, error)
-
-	// File fetches a single file at a specific commit.
-	// Primary method for retrieving pipeline configuration files.
-	// Must fetch at specific commit (b.Commit), not branch head.
-	File(ctx context.Context, u *model.User, r *model.Repo, b *model.Pipeline, fileName string) ([]byte, error)
-
-	// Hook parses incoming webhook and returns pipeline data.
-	//
-	// Webhook Processing Flow:
-	//  1. HTTP request arrives at /api/hook with forge-specific format
-	//  2. Webhook token verified against repo.Hash
-	//  3. Hook() parses webhook and returns (Repo, Pipeline, error)
-	//
-	// Return Semantics:
-	// - (repo, pipeline, nil): Execute pipeline for this event
-	// - (repo, nil, nil): Valid webhook, no pipeline should run
-	// - (nil, nil, types.ErrIgnoreEvent): Event ignored (logged)
-	// - (nil, nil, error): Invalid webhook or parsing error
-	//
-	// Must verify webhook signature to prevent spoofing.
-	// Should return types.ErrIgnoreEvent for non-pipeline events
-	// (e.g. repository settings changed).
-	Hook(ctx context.Context, r *http.Request) (*model.Repo, *model.Pipeline, error)
-
 

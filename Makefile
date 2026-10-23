@@ -1,21 +1,23 @@
+#!/usr/bin/make -rRw
+
 .PHONY: setup build run test clean
 
-APP := gitolite
-MODULE := woodpecker-gitolite-forge
+APP		:= gitolite
+MODULE 	:= woodpecker-gitolite-forge
 
-setup:
-	@if [ ! -f go.mod ]; then go mod init $(MODULE); fi
+SRCS	= $(wildcard *.go)
+
+go.mod:
+	go mod init $(MODULE)
+
+go.sum:
 	go mod tidy
 
-build:
-	mkdir -p bin
+build: go.mod go.sum bin $(SRCS)
 	go build -o bin/$(APP) .
 
-run:
-	go run .
-
-test:
-	go test ./...
+bin:
+	mkdir -p bin
 
 clean:
 	rm -rf bin/
