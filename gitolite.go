@@ -1,8 +1,3 @@
-// It is not possible to access global variables from Woodpecker,
-// for example the server configuration. You must therefore parse
-// the environment variables in your addon. The reason for this is
-//  that the addon runs in a completely separate process.
-
 package main
 
 import (
@@ -11,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/coreos/go-oidc/v3/oidc"
 	"go.woodpecker-ci.org/woodpecker/v3/server"
 	"go.woodpecker-ci.org/woodpecker/v3/server/forge"
 	"go.woodpecker-ci.org/woodpecker/v3/server/forge/types"
@@ -24,8 +20,7 @@ type Opts struct {
 	URL               string // GitWeb URL
 	OAuthClientID     string // Oauth2 client id.
 	OAuthClientSecret string // Oauth2 client secret.
-	OAuth2URL         string // User-facing Forgejo server url for OAuth2.
-	OAuthHost         string // Public url for oauth if different from url.
+	OAuth2URL         string // OAuth2 provider URL to login
 	SkipVerify        bool   // Skip ssl verification.
 }
 
@@ -36,7 +31,6 @@ type Gitolite struct {
 	oAuthClientID     string
 	oAuthClientSecret string
 	oAuth2URL         string
-	oAuthHost         string
 	skipVerify        bool
 }
 
@@ -48,7 +42,6 @@ func New(id int64, opts Opts) (forge.Forge, error) {
 		oAuthClientID:     opts.OAuthClientID,
 		oAuthClientSecret: opts.OAuthClientSecret,
 		oAuth2URL:         opts.OAuth2URL,
-		oAuthHost:         opts.OAuthHost,
 		skipVerify:        opts.SkipVerify,
 	}, nil
 }
@@ -64,15 +57,18 @@ func (g *Gitolite) URL() string {
 }
 
 func (g *Gitolite) oauth2Config(ctx context.Context) (*oauth2.Config, context.Context) {
+	// OIDC Autodiscovery
+	provider, err := oidc.NewProvider(ctx, g.oAuth2URL)
+	if err != nil {
+		return nil, nil
+	}
+
 	return &oauth2.Config{
 			ClientID:     g.oAuthClientID,
 			ClientSecret: g.oAuthClientSecret,
-			Endpoint: oauth2.Endpoint{
-				// TODO Must allow arbirtrary URLs
-				AuthURL:  fmt.Sprintf("%s/api/oidc/authorization", g.url), // Authentication URL
-				TokenURL: fmt.Sprintf("%s/api/oidc/token", g.url),         // Token URL
-			},
-			RedirectURL: fmt.Sprintf("%s/authorize", server.Config.Server.OAuthHost),
+			Endpoint:     provider.Endpoint(),
+			RedirectURL:  fmt.Sprintf("%s/authorize", server.Config.Server.OAuthHost),
+			Scopes:       []string{oidc.ScopeOpenID, "profile", "email"},
 		},
 
 		context.WithValue(ctx, oauth2.HTTPClient, &http.Client{Transport: &http.Transport{

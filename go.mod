@@ -3,6 +3,7 @@ module woodpecker-gitolite-forge
 go 1.27.0
 
 require (
+	github.com/coreos/go-oidc/v3 v3.21.0
 	go.woodpecker-ci.org/woodpecker/v3 v3.19.0
 	golang.org/x/oauth2 v0.37.0
 )
@@ -23,6 +24,7 @@ require (
 	github.com/gdgvda/cron v0.7.0 // indirect
 	github.com/gin-contrib/sse v1.1.0 // indirect
 	github.com/gin-gonic/gin v1.12.0 // indirect
+	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.30.1 // indirect
