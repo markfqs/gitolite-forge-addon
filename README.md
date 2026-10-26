@@ -43,12 +43,14 @@ We need to have provided:
 # Ideas
 
 * Repository listing could be fetched from gitweb project.list
+* Either RClone or bind-mount the forge-addon
 
 # References
 
 * [go-gitolite](https://github.com/VonC/gogitolite)
 * [go-package](https://pkg.go.dev/github.com/VonC/gogitolite/gitolite)
 * [OIDC Client test](https://github.com/leplusorg/openid-connect-provider-debugger)
+* [RClone docker plugin](https://rclone.org/docker/)
 
 We could also mock Repos methods (static)
 
