@@ -8,9 +8,9 @@ GO_IMAGE 	?= golang:1.27
 GOOS 		?= $(shell $(GO) env GOOS)
 GOARCH 		?= $(shell $(GO) env GOARCH)
 CGO_ENABLED ?= 0
-BIN_DIR 	:= bin/$(GOOS)−$(GOARCH)
+BIN_DIR 	:= bin/$(GOOS)-$(GOARCH)
 BIN 		:= $(BIN_DIR)/$(APP)
-GOFILES 	:= $(wildcard .go)
+GOFILES 	:= $(wildcard *.go)
 
 .DEFAULT_GOAL := build
 

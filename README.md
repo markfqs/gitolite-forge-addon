@@ -52,10 +52,13 @@ We need to have provided:
 * [OIDC Client test](https://github.com/leplusorg/openid-connect-provider-debugger)
 * [RClone docker plugin](https://rclone.org/docker/)
 
-We could also mock Repos methods (static)
+Below some relevant WoodPecker discussions/issues relevant, please note that some are quite old and not applicable on newer versions, but provide a good point in some indications
 
-For SSH need:
-- Known hosts
-- SSH user and key
-- SSH server and port
-
+* [Gerrit Forge](https://github.com/woodpecker-ci/woodpecker/issues/4232)
+* [Support for generic git servers](https://github.com/woodpecker-ci/woodpecker/discussions/3591)
+* [Wish setup](https://github.com/woodpecker-ci/woodpecker/discussions/2651)
+* [How to setup a Woodpecker (forge) addon](https://github.com/woodpecker-ci/woodpecker/discussions/3266)
+* [Explain forge](https://github.com/woodpecker-ci/woodpecker/issues/4444) (although abandoned)
+* [How to setup addon](https://github.com/woodpecker-ci/woodpecker/discussions/3266#discussioncomment-8258887)
+* [Radicle Addon](https://github.com/cytechmobile/radicle-woodpecker-addon)
+* [CodeUp Addon](https://github.com/tsrpc/yunxiao-woodpecker-addon)
