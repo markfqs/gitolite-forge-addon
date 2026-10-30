@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"go.woodpecker-ci.org/woodpecker/v3/server"
@@ -16,7 +17,7 @@ import (
 	"golang.org/x/oauth2"
 )
 
-// Opts defines configuration options.
+// GitOpts defines configuration options.
 type GitOpts struct {
 	URL               string // GitWeb URL
 	CloneURL          string // SSH clone URL
@@ -26,7 +27,7 @@ type GitOpts struct {
 	SkipVerify        bool   // Skip ssl verification.
 }
 
-// Gitolite Forge interface
+// Gitolite Forge
 type Gitolite struct {
 	url               string
 	cloneurl          string
@@ -36,9 +37,9 @@ type Gitolite struct {
 	skipVerify        bool
 }
 
-// New returns a Forge implementation that integrates with gitolite git
-func New(opts GitOpts) forge.Forge {
-	fmt.Fprintln(os.Stderr, "New Git Forge %s", opts.CloneURL)
+// Forge implementation that integrates with gitolite git
+func NewGitolite(opts GitOpts) forge.Forge {
+	fmt.Fprintf(os.Stderr, "New Git Forge %s\n", opts.CloneURL)
 	return &Gitolite{
 		url:               opts.URL,
 		cloneurl:          opts.CloneURL,
@@ -51,32 +52,34 @@ func New(opts GitOpts) forge.Forge {
 
 // Name returns the string name of this driver.
 func (g *Gitolite) Name() string {
-	fmt.Fprintln(os.Stderr, "Name Gitolite Forge")
+	fmt.Fprintf(os.Stderr, "Name Gitolite Forge")
 	return "Gitolite"
 }
 
 // URL returns the root url of a configured forge.
 func (g *Gitolite) URL() string {
-	fmt.Fprintln(os.Stderr, "URL Gitolite Forge %s", g.url)
+	fmt.Fprintf(os.Stderr, "URL Gitolite Forge %s\n", g.url)
 	return g.url
 }
 
+// Return oauth config using OpenID autodiscovery
 func (g *Gitolite) oauth2Config(ctx context.Context) (*oauth2.Config, context.Context) {
-	fmt.Fprintln(os.Stderr, "Gitolite OAuth2 Config: %s, %s", g.oAuth2URL, g.oAuthClientID)
+	fmt.Fprintf(os.Stderr, "Gitolite OAuth2 Config: %s\n, %s\n", g.oAuth2URL, g.oAuthClientID)
+
 	// OIDC Autodiscovery
 	provider, err := oidc.NewProvider(ctx, g.oAuth2URL)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Failure initializing OIDC: %s", err.Error())
+		fmt.Fprintf(os.Stderr, "Failure discovering OAuth2 provider: %s\n", err.Error())
 		return nil, nil
 	}
-	fmt.Fprintln(os.Stderr, "Got OIDC context")
+	fmt.Fprintf(os.Stderr, "Got OAuth2 provider")
 
 	return &oauth2.Config{
 			ClientID:     g.oAuthClientID,
 			ClientSecret: g.oAuthClientSecret,
 			Endpoint:     provider.Endpoint(),
-			RedirectURL:  fmt.Sprintf("%s/authorize", server.Config.Server.OAuthHost),
 			Scopes:       []string{oidc.ScopeOpenID, "profile", "email"},
+			RedirectURL:  fmt.Sprintf("%s\n/authorize", server.Config.Server.OAuthHost), // CHECK: Not sure if can access server.Config
 		},
 
 		context.WithValue(ctx, oauth2.HTTPClient, &http.Client{Transport: &http.Transport{
@@ -86,101 +89,133 @@ func (g *Gitolite) oauth2Config(ctx context.Context) (*oauth2.Config, context.Co
 }
 
 // Login authenticates a user via OAuth2.
-//
-// OAuth Flow:
-//  1. Initial call with empty OAuthRequest.Code returns (nil, redirectURL, nil)
-//  2. User authorizes at redirectURL
-//  3. Second call with OAuthRequest.Code returns (User, redirectURL, nil)
-//
-// Returned User must contain: Login, Email, Avatar, AccessToken, RefreshToken, Expiry, ForgeRemoteID
+// Flow into passes, empty cal, auth, return user identity
 func (g *Gitolite) Login(ctx context.Context, req *forge_types.OAuthRequest) (*model.User, string, error) {
-	fmt.Fprintln(os.Stderr, "Gitolite Login: %s", req.Code)
+	fmt.Fprintf(os.Stderr, "Gitolite Login: %s\n", req.Code)
+
 	config, oauth2Ctx := g.oauth2Config(ctx)
 	redirectURL := config.AuthCodeURL(req.State)
 
 	// check the OAuth code
 	if len(req.Code) == 0 {
-		fmt.Fprintln(os.Stderr, "OAuth code error %s", req.State)
+		fmt.Fprintf(os.Stderr, "OAuth First pass")
 		return nil, redirectURL, nil
 	}
 
 	token, err := config.Exchange(oauth2Ctx, req.Code)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Gitolite Auth Token Error: %s", err.Error())
+		fmt.Fprintf(os.Stderr, "Gitolite Auth Token Error: %s\n", err.Error())
 		return nil, redirectURL, fmt.Errorf("error exchanging token: %w", err)
 	}
 
-	// TODO: this MUST be implemented (helper, forgejo uses forgejo.newClientToken)
-	// client, err := c.newClientToken(ctx, token.AccessToken)
-	// client, err := newClient(g.url, token.AccessToken, g.skipVerify)
-	fmt.Fprintln(os.Stderr, "Got User Auth")
+	fmt.Fprintf(os.Stderr, "Got User Auth")
 	user := &model.User{
-		Login:         "Forge User",
-		Email:         "forge.user",
-		ForgeRemoteID: model.ForgeRemoteID(fmt.Sprint("Jack")), // TODO: Needs to set to a real user
+		Login:         "dummy",
+		Email:         "dummy@forge.user",
+		ForgeRemoteID: "dummy",
 		AccessToken:   token.AccessToken,
 		RefreshToken:  token.RefreshToken,
-		Expiry:        token.Expiry.UTC().Unix(),
+		Expiry:        time.Now().Add(time.Hour).Unix(),
 	}
 
 	return user, redirectURL, nil
 }
 
-func (g *Gitolite) Hook(ctx context.Context, r *http.Request) (*model.Repo, *model.Pipeline, error) {
-	fmt.Fprintln(os.Stderr, "Gitolite Hook")
-	// TODO
-	return nil, nil, types.ErrNotImplemented
+/*
+REQUIRED METHODS : Mimic/Mock TODO:Implement
+*/
+func (g *Gitolite) Repo(ctx context.Context, u *model.User, remoteID model.ForgeRemoteID, owner, name string) (*model.Repo, error) {
+	fmt.Fprintf(os.Stderr, "Gitolite Repo")
+	reponame := name
+	return &model.Repo{
+		ForgeRemoteID: remoteID,
+		Name:          reponame,
+		FullName:      reponame + " repository",
+		Owner:         owner,
+		ForgeURL:      g.url + "/" + reponame,
+		Clone:         g.url + "/" + reponame,
+		CloneSSH:      g.cloneurl + "/" + reponame,
+		Branch:        "master",
+		PREnabled:     false,
+		Perm: &model.Perm{
+			Pull:  true,
+			Push:  false,
+			Admin: false,
+		},
+		IsSCMPrivate: true,
+	}, nil
 }
 
-func (g *Gitolite) Repo(ctx context.Context, u *model.User, remoteID model.ForgeRemoteID, owner, name string) (*model.Repo, error) {
-	fmt.Fprintln(os.Stderr, "Gitolite Repo")
+func (g *Gitolite) Hook(ctx context.Context, r *http.Request) (*model.Repo, *model.Pipeline, error) {
+	fmt.Fprintf(os.Stderr, "Gitolite Hook")
 	// TODO
-	return nil, types.ErrNotImplemented
+	return nil, nil, &types.ErrIgnoreEvent{}
 }
 
 func (g *Gitolite) Repos(ctx context.Context, u *model.User, p *model.ListOptions) ([]*model.Repo, error) {
-	fmt.Fprintln(os.Stderr, "Gitolite Repos")
+	fmt.Fprintf(os.Stderr, "Gitolite Repos")
 	// TODO
-	return nil, types.ErrNotImplemented
+
+	var result []*model.Repo
+	repo, _ := g.Repo(ctx, u, "1", "dummy", "dummy")
+	result = append(result, repo)
+	return result, nil
 }
 
 func (g *Gitolite) File(ctx context.Context, u *model.User, r *model.Repo, b *model.Pipeline, fileName string) ([]byte, error) {
-	fmt.Fprintln(os.Stderr, "Gitolite File")
+	fmt.Fprintf(os.Stderr, "Gitolite File")
 	// TODO
-	return nil, types.ErrNotImplemented
+	return nil, nil
 }
 
-// NON Supported methods
-func (g *Gitolite) Netrc(u *model.User, r *model.Repo) (*model.Netrc, error) {
-	return nil, types.ErrNotImplemented
+func (g *Gitolite) Status(ctx context.Context, u *model.User, r *model.Repo, b *model.Pipeline, p *model.Workflow) error {
+	return nil
 }
+
+func (g *Gitolite) Netrc(u *model.User, r *model.Repo) (*model.Netrc, error) {
+	return &model.Netrc{
+		Machine:  "localhost",
+		Login:    "dummy",
+		Password: "nopass",
+	}, nil
+}
+
+func (g *Gitolite) Activate(ctx context.Context, u *model.User, r *model.Repo, link string) error {
+	return nil
+}
+
+func (g *Gitolite) Deactivate(ctx context.Context, u *model.User, r *model.Repo, link string) error {
+	return nil
+}
+
+func (g *Gitolite) BranchHead(ctx context.Context, u *model.User, r *model.Repo, branch string) (*model.Commit, error) {
+	return &model.Commit{
+		SHA:      "",
+		ForgeURL: r.ForgeURL,
+	}, nil
+}
+
+func (g *Gitolite) Org(ctx context.Context, u *model.User, org string) (*model.Org, error) {
+	return &model.Org{
+		Name:   g.Name(),
+		IsUser: true,
+	}, nil
+}
+
+// NON Supported optional methods
 func (g *Gitolite) Teams(ctx context.Context, u *model.User, p *model.ListOptions) ([]*model.Team, error) {
 	return nil, types.ErrNotImplemented
 }
 func (g *Gitolite) Dir(ctx context.Context, u *model.User, r *model.Repo, b *model.Pipeline, dirName string) ([]*types.FileMeta, error) {
 	return nil, types.ErrNotImplemented
 }
-func (g *Gitolite) Status(ctx context.Context, u *model.User, r *model.Repo, b *model.Pipeline, p *model.Workflow) error {
-	return types.ErrNotImplemented
-}
-func (g *Gitolite) Activate(ctx context.Context, u *model.User, r *model.Repo, link string) error {
-	return types.ErrNotImplemented
-}
-func (g *Gitolite) Deactivate(ctx context.Context, u *model.User, r *model.Repo, link string) error {
-	return types.ErrNotImplemented
-}
+
 func (g *Gitolite) Branches(ctx context.Context, u *model.User, r *model.Repo, p *model.ListOptions) ([]string, error) {
-	return nil, types.ErrNotImplemented
-}
-func (g *Gitolite) BranchHead(ctx context.Context, u *model.User, r *model.Repo, branch string) (*model.Commit, error) {
 	return nil, types.ErrNotImplemented
 }
 func (g *Gitolite) PullRequests(ctx context.Context, u *model.User, r *model.Repo, p *model.ListOptions) ([]*model.PullRequest, error) {
 	return nil, types.ErrNotImplemented
 }
 func (g *Gitolite) OrgMembership(ctx context.Context, u *model.User, org string) (*model.OrgPerm, error) {
-	return nil, types.ErrNotImplemented
-}
-func (g *Gitolite) Org(ctx context.Context, u *model.User, org string) (*model.Org, error) {
 	return nil, types.ErrNotImplemented
 }

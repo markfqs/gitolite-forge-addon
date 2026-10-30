@@ -19,5 +19,5 @@ func main() {
 	}
 
 	// Serve Addon
-	addon.Serve(New(opts))
+	addon.Serve(NewGitolite(opts))
 }
