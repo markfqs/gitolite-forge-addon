@@ -19,7 +19,7 @@ GOFILES 	:= $(wildcard *.go)
 all: init deps fmt vet build-all
 
 init:
-	@test -f go.mod || $(GO) mod init $(MODULE) $(GO) mod tidy
+	@test -f go.mod || $(GO) mod init $(MODULE) && $(GO) mod tidy
 
 deps:
 	$(GO) mod download
